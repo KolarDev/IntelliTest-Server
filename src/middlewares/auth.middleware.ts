@@ -1,8 +1,9 @@
-// middleware/auth.middleware.ts
 import { Request, Response, NextFunction } from 'express';
 import { AuthService } from '../services/auth.service';
 import { AuthenticatedRequest } from '../types/auth.types';
 import { UserRole } from '@prisma/client';
+import { catchAsync } from "../utils/catchAsync";
+import { AppError } from "../utils/appError";
 
 const authService = new AuthService();
 
@@ -11,7 +12,6 @@ export const authenticate = async (
   res: Response,
   next: NextFunction
 ) => {
-  try {
     const token = (req.headers['authorization'] as string | undefined)?.replace('Bearer ', '');
 
     if (!token) {
@@ -21,9 +21,6 @@ export const authenticate = async (
     const payload = authService.verifyAccessToken(token);
     req.user = payload;
     next();
-  } catch (error) {
-    return res.status(401).json({ error: 'Invalid or expired token' });
-  }
 };
 
 export const authorize = (...roles: UserRole[]) => {
@@ -40,7 +37,7 @@ export const requireSameOrganization = (
   res: Response,
   next: NextFunction
 ) => {
-  const organizationId = req.params.organizationId || req.body.organizationId;
+  const organizationId = req.params?.organizationId || req.body?.organizationId;
   
   if (req.user.organizationId !== organizationId) {
     return res.status(403).json({ error: 'Access denied to this organization' });

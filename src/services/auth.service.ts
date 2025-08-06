@@ -1,8 +1,7 @@
-// services/auth.service.ts
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
-import { JWTPayload, AuthTokens } from '../types/auth.types';
+import { JWTPayload, AuthTokens, RegisterOrgRequest, CreateStaffRequest, CreateStudentRequest } from '../types/auth.types';
 
 const prisma = new PrismaClient();
 

@@ -1,183 +1,89 @@
-// services/auth.service.ts
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
-import { JWTPayload, AuthTokens, RegisterOrgRequest, CreateStaffRequest, CreateStudentRequest } from '../types/auth.types';
+import { Router, Request, Response } from 'express';
+import { AuthService } from '../services/auth.service';
+import { authenticate, authorize } from '../middlewares/auth.middleware';
+import { RegisterOrgRequest, LoginRequest, CreateStaffRequest, CreateStudentRequest, AuthenticatedRequest } from '../types/auth.types';
 
-const prisma = new PrismaClient();
+const router = Router();
+const authService = new AuthService();
 
-export class AuthService {
-  private readonly JWT_SECRET = process.env.JWT_SECRET!;
-  private readonly JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET!;
-  private readonly JWT_EXPIRE = '15m';
-  private readonly JWT_REFRESH_EXPIRE = '7d';
-
-  async hashPassword(password: string): Promise<string> {
-    return bcrypt.hash(password, 12);
-  }
-
-  async comparePassword(password: string, hash: string): Promise<boolean> {
-    return bcrypt.compare(password, hash);
-  }
-
-  generateTokens(payload: Omit<JWTPayload, 'iat' | 'exp'>): AuthTokens {
-    const accessToken = jwt.sign(payload, this.JWT_SECRET, {
-      expiresIn: this.JWT_EXPIRE,
-    });
-
-    const refreshToken = jwt.sign(payload, this.JWT_REFRESH_SECRET, {
-      expiresIn: this.JWT_REFRESH_EXPIRE,
-    });
-
-    return {
-      accessToken,
-      refreshToken,
-      expiresIn: 15 * 60 * 1000, // 15 minutes in ms
-    };
-  }
-
-  verifyAccessToken(token: string): JWTPayload {
-    return jwt.verify(token, this.JWT_SECRET) as JWTPayload;
-  }
-
-  verifyRefreshToken(token: string): JWTPayload {
-    return jwt.verify(token, this.JWT_REFRESH_SECRET) as JWTPayload;
-  }
-
-  async registerOrganization(data: RegisterOrgRequest) {
-    const hashedPassword = await this.hashPassword(data.password);
-
-    const user = await prisma.user.create({
-      data: {
-        email: data.email,
-        passwordHash: hashedPassword,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        role: 'ORG_ADMIN',
-        organization: {
-          create: {
-            name: data.organizationName,
-            domain: data.domain,
-          },
-        },
+// Organization Registration
+export const register = async (req: Request, res: Response) => {
+    const data: RegisterOrgRequest = req.body;
+    const result = await authService.registerOrganization(data);
+    
+    res.status(201).json({
+      message: 'Organization registered successfully',
+      user: {
+        id: result.user.id,
+        email: result.user.email,
+        role: result.user.role,
+        organization: result.user.organization,
       },
-      include: {
-        organization: true,
+      tokens: result.tokens,
+    });
+  
+};
+
+// Login
+export const login = async (req: Request, res: Response) => {
+    const { email, password }: LoginRequest = req.body;
+    const result = await authService.login(email, password);
+    
+    res.json({
+      message: 'Login successful',
+      user: {
+        id: result.user.id,
+        email: result.user.email,
+        role: result.user.role,
+        firstName: result.user.firstName,
+        lastName: result.user.lastName,
       },
+      tokens: result.tokens,
     });
+ 
+};
 
-    const tokens = this.generateTokens({
-      userId: user.id,
-      email: user.email,
-      role: user.role,
-      organizationId: user.organization?.id,
-    });
-
-    return { user, tokens };
-  }
-
-  async login(email: string, password: string) {
-    const user = await prisma.user.findUnique({
-      where: { email },
-      include: {
-        organization: true,
-        staff: { include: { organization: true } },
-        student: { include: { organization: true } },
-      },
-    });
-
-    if (!user || !user.isActive) {
-      throw new Error('Invalid credentials');
-    }
-
-    const isValidPassword = await this.comparePassword(password, user.passwordHash);
-    if (!isValidPassword) {
-      throw new Error('Invalid credentials');
-    }
-
-    // Update last login
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { lastLogin: new Date() },
-    });
-
-    // Get organization ID based on role
-    let organizationId: string | undefined;
-    if (user.organization) organizationId = user.organization.id;
-    else if (user.staff) organizationId = user.staff.organization.id;
-    else if (user.student) organizationId = user.student.organization.id;
-
-    const tokens = this.generateTokens({
-      userId: user.id,
-      email: user.email,
-      role: user.role,
-      organizationId,
-    });
-
-    return { user, tokens };
-  }
-
-  async createStaff(organizationId: string, data: CreateStaffRequest) {
-    // Generate temporary password
-    const tempPassword = Math.random().toString(36).slice(-8);
-    const hashedPassword = await this.hashPassword(tempPassword);
-
-    const user = await prisma.user.create({
-      data: {
-        email: data.email,
-        passwordHash: hashedPassword,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        role: 'STAFF',
+// Create Staff (Organization Admin only)
+const staff = 
+  async (req: AuthenticatedRequest, res: Response) => {
+      const data: CreateStaffRequest = req.body;
+      const staff = await authService.createStaff(req.user.organizationId!, data);
+      
+      res.status(201).json({
+        message: 'Staff created successfully',
         staff: {
-          create: {
-            organizationId,
-            department: data.department,
-            position: data.position,
-            permissions: data.permissions || {},
-          },
+          id: staff.id,
+          email: staff.email,
+          firstName: staff.firstName,
+          lastName: staff.lastName,
+          department: staff.staff?.department,
+          position: staff.staff?.position,
         },
-      },
-      include: {
-        staff: true,
-      },
-    });
-
-    // TODO: Send email with temporary password
-    console.log(`Staff created. Temporary password: ${tempPassword}`);
-
-    return user;
+      });
+   
   }
 
-  async createStudent(organizationId: string, creatorId: string, data: CreateStudentRequest) {
-    // Generate simple password based on student ID
-    const password = `${data.studentId}@123`;
-    const hashedPassword = await this.hashPassword(password);
-
-    const user = await prisma.user.create({
-      data: {
-        email: data.email,
-        passwordHash: hashedPassword,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        role: 'STUDENT',
+// Create Student (Organization Admin or Staff)
+const createStudent =  async (req: AuthenticatedRequest, res: Response) => {
+      const data: CreateStudentRequest = req.body;
+      const student = await authService.createStudent(
+        req.user.organizationId!,
+        req.user.userId,
+        data
+      );
+      
+      res.status(201).json({
+        message: 'Student created successfully',
         student: {
-          create: {
-            organizationId,
-            studentId: data.studentId,
-            createdBy: creatorId,
-            metadata: data.metadata || {},
-          },
+          id: student.id,
+          email: student.email,
+          firstName: student.firstName,
+          lastName: student.lastName,
+          studentId: student.student?.studentId,
         },
-      },
-      include: {
-        student: true,
-      },
-    });
-
-    // TODO: Send email with credentials
-    console.log(`Student created. Password: ${password}`);
-
-    return user;
+      });
+   
   }
-}
+
+
+export default router;

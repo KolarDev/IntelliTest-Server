@@ -3,7 +3,7 @@ import * as z from "zod";
 
 const configSchema = z
   .object({
-    PORT: z.coerce.number().default(9091),
+    PORT: z.coerce.number().default(5050),
 
     NODE_ENV: z.enum(["DEVELOPMENT", "PRODUCTION", "STAGING"]).default("DEVELOPMENT"),
 
@@ -25,7 +25,8 @@ const configSchema = z
 
     ALLOWED_ORIGINS: z.string().default("*"),
   })
-  .strict();
+  .passthrough();
+  // .strict();
 
 type TConfig = z.infer<typeof configSchema>;
 

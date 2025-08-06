@@ -1,0 +1,62 @@
+{
+  "name": "intellitest-server",
+  "version": "1.0.0",
+  "description": "This is the server side of the intellitest online cbt platform",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest --watchAll",
+    "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
+    "build": "prisma generate && tsc && npm run copy:views",
+    "start": "node dist/server.js",
+    "copy:views": "copyfiles -u 1 src/views/**/* dist/views",
+    "prisma:deploy": "npx prisma migrate deploy",
+    "prisma:migrate": "npx prisma migrate dev",
+    "prisma:generate": "npx prisma generate",
+    "prisma:studio": "npx prisma studio"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/KolarDev/IntelliTest-Server.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/KolarDev/IntelliTest-Server/issues"
+  },
+  "homepage": "https://github.com/KolarDev/IntelliTest-Server#readme",
+  "dependencies": {
+    "@prisma/client": "^6.13.0",
+    "bcryptjs": "^3.0.2",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.1",
+    "express": "^5.1.0",
+    "helmet": "^8.1.0",
+    "hpp": "^0.2.3",
+    "html-to-text": "^9.0.5",
+    "ioredis": "^5.7.0",
+    "jsonwebtoken": "^9.0.2",
+    "nodemailer": "^7.0.5",
+    "pug": "^3.0.3",
+    "redis": "^5.8.0",
+    "winston": "^3.17.0",
+    "zod": "^4.0.15"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cookie-parser": "^1.4.9",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "@types/html-to-text": "^9.0.4",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^24.2.0",
+    "@types/nodemailer": "^6.4.17",
+    "@types/pug": "^2.0.10",
+    "copyfiles": "^2.4.1",
+    "ioredis-mock": "^8.9.0",
+    "nodemon": "^3.1.10",
+    "prisma": "^6.13.0",
+    "ts-node": "^10.9.2",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.9.2"
+  }
+}

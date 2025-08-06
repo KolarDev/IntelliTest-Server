@@ -1,0 +1,294 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// prisma/schema.prisma
+model User {
+  id                String    @id @default(uuid())
+  email             String    @unique
+  passwordHash      String
+  role              UserRole
+  firstName         String
+  lastName          String
+  isActive          Boolean   @default(true)
+  isVerified        Boolean   @default(false)
+  verificationToken String?
+  resetToken        String?
+  resetTokenExpiry  DateTime?
+  lastLogin         DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // Relationships
+  organization Organization?
+  staff        Staff?
+  student      Student?
+
+  @@map("users")
+}
+
+model Organization {
+  id               String   @id @default(uuid())
+  userId           String   @unique
+  name             String
+  domain           String?  @unique
+  subscriptionPlan String   @default("FREE")
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // Relationships
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  staff    Staff[]
+  students Student[]
+  tests    Test[]
+  classes  Class[]
+
+  @@map("organizations")
+}
+
+model Staff {
+  id             String   @id @default(uuid())
+  userId         String   @unique
+  organizationId String
+  department     String?
+  position       String?
+  permissions    Json     @default("{}")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relationships
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdClasses  Class[]      @relation("ClassCreator")
+  createdTests    Test[]       @relation("TestCreator")
+  createdStudents Student[]    @relation("StudentCreator")
+
+  @@map("staff")
+}
+
+model Student {
+  id             String   @id @default(uuid())
+  userId         String   @unique
+  organizationId String
+  studentId      String   // Custom student ID
+  createdBy      String   // Staff or Org Admin who created
+  metadata       Json     @default("{}")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relationships
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization  Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  creator       Staff          @relation("StudentCreator", fields: [createdBy], references: [id])
+  classStudents ClassStudent[]
+  examSessions  ExamSession[]
+  results       Result[]
+
+  @@unique([organizationId, studentId])
+  @@map("students")
+}
+
+model Class {
+  id             String   @id @default(uuid())
+  organizationId String
+  staffId        String   // Creator
+  name           String
+  description    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relationships
+  organization    Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  staff           Staff            @relation("ClassCreator", fields: [staffId], references: [id], onDelete: Cascade)
+  classStudents   ClassStudent[]
+  testAssignments TestAssignment[]
+
+  @@map("classes")
+}
+
+model ClassStudent {
+  id         String   @id @default(uuid())
+  classId    String
+  studentId  String
+  enrolledAt DateTime @default(now())
+
+  // Relationships
+  class   Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([classId, studentId])
+  @@map("class_students")
+}
+
+model Test {
+  id                 String   @id @default(uuid())
+  organizationId     String
+  creatorId          String   // Staff who created
+  title              String
+  description        String?
+  durationMinutes    Int
+  totalMarks         Int
+  passingMarks       Int
+  instructions       String?
+  isPublished        Boolean  @default(false)
+  randomizeQuestions Boolean  @default(false)
+  preventTabSwitch   Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  // Relationships
+  organization    Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  creator         Staff            @relation("TestCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  questions       Question[]
+  testAssignments TestAssignment[]
+  examSessions    ExamSession[]
+  results         Result[]
+
+  @@map("tests")
+}
+
+model Question {
+  id                String   @id @default(uuid())
+  testId            String
+  questionText      String
+  questionType      QuestionType
+  marks             Int
+  timeLimitSeconds  Int?
+  orderIndex        Int
+  createdAt         DateTime @default(now())
+
+  // Relationships
+  test            Test             @relation(fields: [testId], references: [id], onDelete: Cascade)
+  questionOptions QuestionOption[]
+  studentAnswers  StudentAnswer[]
+
+  @@map("questions")
+}
+
+model QuestionOption {
+  id           String  @id @default(uuid())
+  questionId   String
+  optionText   String
+  isCorrect    Boolean @default(false)
+  orderIndex   Int
+
+  // Relationships
+  question       Question        @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  studentAnswers StudentAnswer[]
+
+  @@map("question_options")
+}
+
+model TestAssignment {
+  id          String    @id @default(uuid())
+  testId      String
+  classId     String
+  startTime   DateTime
+  endTime     DateTime
+  maxAttempts Int       @default(1)
+  createdAt   DateTime  @default(now())
+
+  // Relationships
+  test  Test  @relation(fields: [testId], references: [id], onDelete: Cascade)
+  class Class @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  @@map("test_assignments")
+}
+
+model ExamSession {
+  id          String        @id @default(uuid())
+  testId      String
+  studentId   String
+  startTime   DateTime      @default(now())
+  endTime     DateTime?
+  status      SessionStatus @default(IN_PROGRESS)
+  ipAddress   String?
+  userAgent   String?
+  tabSwitches Int           @default(0)
+  createdAt   DateTime      @default(now())
+
+  // Relationships
+  test           Test            @relation(fields: [testId], references: [id], onDelete: Cascade)
+  student        Student         @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentAnswers StudentAnswer[]
+  result         Result?
+
+  @@map("exam_sessions")
+}
+
+model StudentAnswer {
+  id                 String   @id @default(uuid())
+  sessionId          String
+  questionId         String
+  answerText         String?
+  selectedOptionId   String?
+  isCorrect          Boolean?
+  marksAwarded       Decimal?
+  timeTakenSeconds   Int?
+  createdAt          DateTime @default(now())
+
+  // Relationships
+  session        ExamSession     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  question       Question        @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  selectedOption QuestionOption? @relation(fields: [selectedOptionId], references: [id])
+
+  @@unique([sessionId, questionId])
+  @@map("student_answers")
+}
+
+model Result {
+  id            String       @id @default(uuid())
+  sessionId     String       @unique
+  studentId     String
+  testId        String
+  totalMarks    Decimal
+  obtainedMarks Decimal
+  percentage    Decimal
+  grade         String?
+  status        ResultStatus
+  submittedAt   DateTime     @default(now())
+  gradedAt      DateTime?
+
+  // Relationships
+  session ExamSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  student Student     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  test    Test        @relation(fields: [testId], references: [id], onDelete: Cascade)
+
+  @@map("results")
+}
+
+enum UserRole {
+  ORG_ADMIN
+  STAFF
+  STUDENT
+}
+
+enum QuestionType {
+  MULTIPLE_CHOICE
+  TRUE_FALSE
+  ESSAY
+  FILL_BLANK
+}
+
+enum SessionStatus {
+  IN_PROGRESS
+  COMPLETED
+  TERMINATED
+}
+
+enum ResultStatus {
+  PASS
+  FAIL
+}

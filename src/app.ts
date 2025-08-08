@@ -20,7 +20,7 @@ app.use(bodyparser.json());
 app.get("/", (req: Request, res: Response) => {
   res.status(200).json({
     message: "Hey there! from the sever side",
-    app: "Learnify API",
+    app: "IntelliTest API",
   });
 });
 

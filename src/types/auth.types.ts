@@ -2,21 +2,12 @@ import { Request } from 'express';
 import { UserRole } from '@prisma/client';
 
 export interface JWTPayload {
-  userId: string;
+  id: number;
   email: string;
   role: UserRole;
   organizationId?: string;
   iat: number;
   exp: number;
-}
-
-export interface AuthenticatedRequest<
-  P = any,
-  ResBody = any,
-  ReqBody = any,
-  ReqQuery = any
-> extends Request<P, ResBody, ReqBody, ReqQuery> {
-  user: JWTPayload;
 }
 
 export interface RegisterOrgRequest {

@@ -1,6 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
 import { AuthService } from '../services/auth.service';
-import { AuthenticatedRequest } from '../types/auth.types';
 import { UserRole } from '@prisma/client';
 import { catchAsync } from "../utils/catchAsync";
 import { AppError } from "../utils/appError";
@@ -8,7 +7,7 @@ import { AppError } from "../utils/appError";
 const authService = new AuthService();
 
 export const authenticate = async (
-  req: AuthenticatedRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ) => {
@@ -23,9 +22,10 @@ export const authenticate = async (
     next();
 };
 
+
 export const authorize = (...roles: UserRole[]) => {
-  return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    if (!roles.includes(req.user.role)) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (!roles.includes(req.user?.role)) {
       return res.status(403).json({ error: 'Insufficient permissions' });
     }
     next();
@@ -33,13 +33,13 @@ export const authorize = (...roles: UserRole[]) => {
 };
 
 export const requireSameOrganization = (
-  req: AuthenticatedRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ) => {
   const organizationId = req.params?.organizationId || req.body?.organizationId;
   
-  if (req.user.organizationId !== organizationId) {
+  if (req.user?.organizationId !== organizationId) {
     return res.status(403).json({ error: 'Access denied to this organization' });
   }
   

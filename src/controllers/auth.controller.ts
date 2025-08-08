@@ -1,13 +1,13 @@
 import { Router, Request, Response } from 'express';
 import { AuthService } from '../services/auth.service';
 import { authenticate, authorize } from '../middlewares/auth.middleware';
-import { RegisterOrgRequest, LoginRequest, CreateStaffRequest, CreateStudentRequest, AuthenticatedRequest } from '../types/auth.types';
+import { RegisterOrgRequest, LoginRequest, CreateStaffRequest, CreateStudentRequest } from '../types/auth.types';
 
 const router = Router();
 const authService = new AuthService();
 
 // Organization Registration
-export const register = async (req: Request, res: Response) => {
+export const registerOrg = async (req: Request, res: Response) => {
     const data: RegisterOrgRequest = req.body;
     const result = await authService.registerOrganization(data);
     
@@ -44,10 +44,10 @@ export const login = async (req: Request, res: Response) => {
 };
 
 // Create Staff (Organization Admin only)
-const staff = 
-  async (req: AuthenticatedRequest, res: Response) => {
+export const createStaff = 
+  async (req: Request, res: Response) => {
       const data: CreateStaffRequest = req.body;
-      const staff = await authService.createStaff(req.user.organizationId!, data);
+      const staff = await authService.createStaff(req.user?.organizationId!, data);
       
       res.status(201).json({
         message: 'Staff created successfully',
@@ -64,11 +64,11 @@ const staff =
   }
 
 // Create Student (Organization Admin or Staff)
-const createStudent =  async (req: AuthenticatedRequest, res: Response) => {
+export const createStudent =  async (req: Request, res: Response) => {
       const data: CreateStudentRequest = req.body;
       const student = await authService.createStudent(
-        req.user.organizationId!,
-        req.user.userId,
+        req.user?.organizationId!,
+        req.user?.userId,
         data
       );
       

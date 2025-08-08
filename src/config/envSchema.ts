@@ -22,6 +22,7 @@ const configSchema = z
     BREVO_PASSWORD: z.string(),
 
     DATABASE_URL: z.string().url(),
+    DATABASE_URL_CLOUD: z.string().url(),
 
     ALLOWED_ORIGINS: z.string().default("*"),
   })

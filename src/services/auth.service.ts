@@ -66,7 +66,7 @@ export class AuthService {
     });
 
     const tokens = this.generateTokens({
-      userId: user.id,
+      id: Number(user.id),
       email: user.email,
       role: user.role,
       organizationId: user.organization?.id,
@@ -107,7 +107,7 @@ export class AuthService {
     else if (user.student) organizationId = user.student.organization.id;
 
     const tokens = this.generateTokens({
-      userId: user.id,
+      id: Number(user.id),
       email: user.email,
       role: user.role,
       organizationId,

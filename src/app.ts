@@ -6,7 +6,7 @@ import { AppError } from "./utils/appError";
 
 
 // // Import Routes
-// import authRoutes from "./routes/auth.route";
+import authRoutes from "./routes/auth.route";
 // import userRoutes from "./routes/user.route";
 
 
@@ -24,7 +24,7 @@ app.get("/", (req: Request, res: Response) => {
   });
 });
 
-// app.use("/api/v1/auths", authRoutes);
+app.use("/api/v1/auths", authRoutes);
 // app.use("/api/v1/users", userRoutes);
 
 

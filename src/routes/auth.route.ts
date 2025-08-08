@@ -1,7 +1,9 @@
 import express from "express";
 import {
-  register,
+  registerOrg,
   login,
+  createStaff,
+  createStudent,
 //   logout,
 //   refreshToken,
 //   sendOtp,
@@ -10,14 +12,16 @@ import {
 //   resetPassword,
 //   getMe,
 } from "../controllers/auth.controller";
-import { authenticate } from "../middlewares/auth.middleware";
+import { authenticate, authorize } from "../middlewares/auth.middleware";
+import { UserRole } from "@prisma/client";
 // import { idempotencyMiddleware } from "../middlewares/idempotency.middleware";
 
 const router = express.Router();
 
 // router.use(idempotencyMiddleware);
-router.post("/register", register);
+router.post("/register", registerOrg);
 router.post("/login", login);
+
 // router.post("/refresh-token", refreshToken);
 // router.post("/forgot-password", forgotPassword);
 // router.patch("/reset-password", resetPassword);
@@ -28,4 +32,10 @@ router.post("/login", login);
 // router.post("/logout", logout);
 // router.get("/me", protect, getMe);
 
+// Protected routes
+router.use(authenticate);
+router.post('/staff', authorize(UserRole.ORG_ADMIN), createStaff);
+router.post('/student', authorize(UserRole.ORG_ADMIN, UserRole.STAFF), createStudent);
+
 export default router;
+

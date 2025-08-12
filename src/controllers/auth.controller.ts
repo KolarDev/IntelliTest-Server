@@ -86,7 +86,10 @@ export const createStudent =  async (req: Request, res: Response) => {
 }
 
 export const refreshToken = catchAsync(async (req: Request, res: Response) => {
-  const token: string | undefined = req.cookies?.refreshToken;
+  const token: string | undefined =
+    req.cookies?.refreshToken ||
+    (req.headers["x-refresh-token"] as string | undefined) ||
+    req.body?.refreshToken;
 
   if (!token) {
     throw new AppError("No refresh token provided", 401);

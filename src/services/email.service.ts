@@ -20,7 +20,7 @@ export class Email {
     this.to = email;
     this.user = contents.user;
     this.extraData = contents.extraData;
-    this.from = `Movendra <${process.env.EMAIL_FROM}>`;
+    this.from = `IntelliTest <${process.env.EMAIL_FROM}>`;
   }
 
   private newTransport(): Transporter {

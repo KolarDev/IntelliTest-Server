@@ -2,7 +2,9 @@ import { Router, Request, Response } from 'express';
 import { AuthService } from '../services/auth.service';
 import { authenticate, authorize } from '../middlewares/auth.middleware';
 import { RegisterOrgRequest, LoginRequest, CreateStaffRequest, CreateStudentRequest } from '../types/auth.types';
-import { catchAsync } from 'utils/catchAsync';
+import { catchAsync } from '../utils/catchAsync';
+import { AppError } from '../utils/appError';
+import { config } from '../config/envSchema';
 
 const authService = new AuthService();
 
@@ -152,6 +154,9 @@ export const resetPassword = catchAsync(async (req: Request, res: Response) => {
 });
 
 export const getMe = catchAsync(async (req: Request, res: Response) => {
+  if (!req.user) {
+    throw new AppError("User not authenticated", 401);
+  }
   const user = await authService.getMe(req.user.id);
   res.status(200).json({
     status: "success",

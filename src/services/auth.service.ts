@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import { prisma } from '../lib/prisma';
 import { config } from '../config/envSchema';
 import { Email } from './email.service';
-import { AppError } from 'utils/appError';
+import { AppError } from '../utils/appError';
 import { JWTPayload, AuthTokens, RegisterOrgRequest, CreateStaffRequest, CreateStudentRequest } from '../types/auth.types';
 
 export class AuthService {

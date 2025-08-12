@@ -1,15 +1,16 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/prisma';
+import { config } from '../config/envSchema';
+import { Email } from './email.service';
+import { AppError } from 'utils/appError';
 import { JWTPayload, AuthTokens, RegisterOrgRequest, CreateStaffRequest, CreateStudentRequest } from '../types/auth.types';
 
-const prisma = new PrismaClient();
-
 export class AuthService {
-  private readonly JWT_SECRET = process.env.JWT_SECRET!;
-  private readonly JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET!;
-  private readonly JWT_EXPIRE = '15m';
-  private readonly JWT_REFRESH_EXPIRE = '7d';
+  private readonly JWT_SECRET = config.JWT_SECRET;
+  private readonly JWT_REFRESH_SECRET = config.JWT_REFRESH_SECRET;
+  private readonly JWT_EXPIRES_IN = config.JWT_ACCESS_EXPIRES_IN;
+  private readonly JWT_REFRESH_EXPIRES_IN = config.JWT_REFRESH_EXPIRES_IN;
 
   async hashPassword(password: string): Promise<string> {
     return bcrypt.hash(password, 12);
@@ -20,13 +21,19 @@ export class AuthService {
   }
 
   generateTokens(payload: Omit<JWTPayload, 'iat' | 'exp'>): AuthTokens {
-    const accessToken = jwt.sign(payload, this.JWT_SECRET, {
-      expiresIn: this.JWT_EXPIRE,
-    });
+    const accessToken = jwt.sign(payload, this.JWT_SECRET,
+      {
+        algorithm: "HS256",
+        expiresIn: this.JWT_EXPIRES_IN
+      } as jwt.SignOptions
+    );
 
-    const refreshToken = jwt.sign(payload, this.JWT_REFRESH_SECRET, {
-      expiresIn: this.JWT_REFRESH_EXPIRE,
-    });
+    const refreshToken = jwt.sign(payload, this.JWT_REFRESH_SECRET,
+      {
+        algorithm: "HS256",
+        expiresIn: this.JWT_REFRESH_EXPIRES_IN
+      } as jwt.SignOptions
+    );
 
     return {
       accessToken,
@@ -66,7 +73,7 @@ export class AuthService {
     });
 
     const tokens = this.generateTokens({
-      id: Number(user.id),
+      id: user.id,
       email: user.email,
       role: user.role,
       organizationId: user.organization?.id,
@@ -107,7 +114,7 @@ export class AuthService {
     else if (user.student) organizationId = user.student.organization.id;
 
     const tokens = this.generateTokens({
-      id: Number(user.id),
+      id: user.id,
       email: user.email,
       role: user.role,
       organizationId,
@@ -177,6 +184,138 @@ export class AuthService {
     // TODO: Send email with credentials
     console.log(`Student created. Password: ${password}`);
 
+    return user;
+  }
+
+  
+  async refreshTokens(refreshToken: string) {
+    let decoded: JWTPayload;
+    try {
+      decoded = this.verifyRefreshToken(refreshToken);
+    } catch (err) {
+      throw new AppError("Invalid or expired refresh token", 403);
+    }
+  
+    const user = await prisma.user.findUnique({ 
+      where: { id: decoded.id },
+      include: {
+        organization: true,
+        staff: { include: { organization: true } },
+        student: { include: { organization: true } },
+      },
+    });
+    if (!user) {
+      throw new AppError("User not found or refresh token invalid", 403);
+    }
+  
+    // Generate new tokens
+    const organizationId = user.organization?.id || user.staff?.organizationId || user.student?.organizationId;
+  
+    const newTokens = this.generateTokens({
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      organizationId,
+    });
+  
+    return newTokens;
+  }
+
+  async logout(refreshToken: string) {
+    let decoded: JWTPayload;
+    try {
+      decoded = this.verifyRefreshToken(refreshToken);
+    } catch (err) {
+      throw new AppError("Invalid or expired refresh token", 403);
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: decoded.id } });
+    if (!user) {
+      throw new AppError("User not found or refresh token invalid", 403);
+    }
+
+    // Since we don't store refresh tokens in the database,
+    // we simply clear the cookie on the client side.
+    // The token will eventually expire on its own.
+  }
+
+  // Helper method to handle OTP logic
+  private async _handleOtp(email: string, template: string, subject: string) {
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) throw new AppError("No user with that email", 404);
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
+    const expires = new Date(Date.now() + 5 * 60 * 1000); // 5 mins
+
+    await prisma.user.update({
+      where: { email },
+      data: { otpCode: otp, otpExpiresAt: expires, isVerified: false }, // Set isVerified to false
+    });
+    
+    // Use firstName as the user's name in the email
+    const userName = user.firstName;
+
+    await new Email(user.email, {
+      user,
+      extraData: { otp, userName }
+    }).send(template, subject);
+  }
+
+  async sendOtp(email: string) {
+    await this._handleOtp(email, "sendOtp", "Your IntelliTest OTP Code");
+  }
+
+  async verifyOtp(email: string, otp: string) {
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user || user.otpCode !== otp || !user.otpExpiresAt || user.otpExpiresAt < new Date()) {
+      throw new AppError("Invalid or expired OTP", 400);
+    }
+
+    await prisma.user.update({
+      where: { email },
+      data: { otpCode: null, otpExpiresAt: null, isVerified: true }, // Set to verified
+    });
+  }
+
+  async forgotPassword(email: string) {
+    await this._handleOtp(email, "forgotPasswordOtp", "Reset Your Password");
+  }
+
+  async resetPassword(email: string, otp: string, newPassword: string) {
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user || user.otpCode !== otp || !user.otpExpiresAt || user.otpExpiresAt < new Date()) {
+      throw new AppError("Invalid or expired OTP", 400);
+    }
+
+    const hashedPassword = await this.hashPassword(newPassword);
+
+    await prisma.user.update({
+      where: { email },
+      data: {
+        passwordHash: hashedPassword,
+        otpCode: null,
+        otpExpiresAt: null,
+      },
+    });
+  }
+
+  async getMe(userId: string) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { 
+        id: true, 
+        email: true, 
+        firstName: true,
+        lastName: true,
+        role: true,
+        isActive: true,
+        isVerified: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    if (!user) throw new AppError("User not found", 404);
     return user;
   }
 }

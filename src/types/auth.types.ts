@@ -2,7 +2,7 @@ import { Request } from 'express';
 import { UserRole } from '@prisma/client';
 
 export interface JWTPayload {
-  id: number;
+  id: string;
   email: string;
   role: UserRole;
   organizationId?: string;

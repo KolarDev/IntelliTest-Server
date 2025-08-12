@@ -29,11 +29,15 @@ model User {
   lastLogin         DateTime?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
+  // Fields for OTP and password reset functionality
+  otpCode           String?
+  otpExpiresAt      DateTime?
 
   // Relationships
   organization Organization?
   staff        Staff?
   student      Student?
+  createdStudents   Student[]   @relation("StudentCreator")
 
   @@map("users")
 }
@@ -73,7 +77,6 @@ model Staff {
   organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   createdClasses  Class[]      @relation("ClassCreator")
   createdTests    Test[]       @relation("TestCreator")
-  createdStudents Student[]    @relation("StudentCreator")
 
   @@map("staff")
 }
@@ -91,7 +94,7 @@ model Student {
   // Relationships
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   organization  Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  creator       Staff          @relation("StudentCreator", fields: [createdBy], references: [id])
+  creator        User        @relation("StudentCreator", fields: [createdBy], references: [id])
   classStudents ClassStudent[]
   examSessions  ExamSession[]
   results       Result[]

@@ -93,12 +93,12 @@ export class AuthService {
     });
 
     if (!user || !user.isActive) {
-      throw new Error('Invalid credentials');
+      throw new AppError('Invalid credentials', 401);
     }
 
     const isValidPassword = await this.comparePassword(password, user.passwordHash);
     if (!isValidPassword) {
-      throw new Error('Invalid credentials');
+      throw new AppError('Invalid credentials', 401);
     }
 
     // Update last login

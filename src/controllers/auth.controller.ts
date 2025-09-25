@@ -9,7 +9,7 @@ import { config } from '../config/envSchema';
 const authService = new AuthService();
 
 // Organization Registration
-export const registerOrg = async (req: Request, res: Response) => {
+export const registerOrg = catchAsync(async (req: Request, res: Response) => {
     const data: RegisterOrgRequest = req.body;
     const result = await authService.registerOrganization(data);
     
@@ -19,16 +19,17 @@ export const registerOrg = async (req: Request, res: Response) => {
       user: {
         id: result.user.id,
         email: result.user.email,
+        firstName: result.user.firstName,
+        lastName: result.user.lastName,
         role: result.user.role,
         organization: result.user.organization,
       },
       tokens: result.tokens,
     });
-  
-};
+});
 
 // Login
-export const login = async (req: Request, res: Response) => {
+export const login = catchAsync(async (req: Request, res: Response) => {
     const { email, password }: LoginRequest = req.body;
     const result = await authService.login(email, password);
     
@@ -44,12 +45,10 @@ export const login = async (req: Request, res: Response) => {
       },
       tokens: result.tokens,
     });
- 
-};
+});
 
 // Create Staff (Organization Admin only)
-export const createStaff = 
-  async (req: Request, res: Response) => {
+export const createStaff = catchAsync(async (req: Request, res: Response) => {
       const data: CreateStaffRequest = req.body;
       const staff = await authService.createStaff(req.user?.organizationId!, data);
       
@@ -65,11 +64,10 @@ export const createStaff =
           position: staff.staff?.position,
         },
       });
-   
-  }
+});
 
 // Create Student (Organization Admin or Staff)
-export const createStudent =  async (req: Request, res: Response) => {
+export const createStudent = catchAsync(async (req: Request, res: Response) => {
   const data: CreateStudentRequest = req.body;
   const student = await authService.createStudent(
     req.user?.organizationId!,
@@ -82,8 +80,8 @@ export const createStudent =  async (req: Request, res: Response) => {
     status: "success",
     message: 'Student created successfully',
     student
-  });   
-}
+  });
+});
 
 export const refreshToken = catchAsync(async (req: Request, res: Response) => {
   const token: string | undefined =

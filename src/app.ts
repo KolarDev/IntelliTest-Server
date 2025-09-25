@@ -1,6 +1,7 @@
 import path from "path";
 import express, { Application, Request, Response, ErrorRequestHandler } from "express";
 import bodyparser from "body-parser";
+import cors from "cors";
 import { globalErrorHandler } from "./middlewares/globalErrorHandler";
 import { AppError } from "./utils/appError";
 
@@ -11,6 +12,14 @@ import authRoutes from "./routes/auth.route";
 
 
 const app: Application = express();
+
+// CORS configuration
+app.use(cors({
+  origin: ['http://localhost:3000', 'http://127.0.0.1:3000'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+}));
 
 app.use(express.json());
 app.use(bodyparser.json());

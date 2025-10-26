@@ -34,7 +34,7 @@ app.get("/", (req: Request, res: Response) => {
 });
 
 app.use("/api/v1/auths", authRoutes);
-// app.use("/api/v1/users", userRoutes);
+app.use("/api/v1/users", userRoutes);
 
 
 // Handle 404

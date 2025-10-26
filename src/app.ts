@@ -8,6 +8,7 @@ import { AppError } from "./utils/appError";
 
 // // Import Routes
 import authRoutes from "./routes/auth.route";
+import classRoutes from "./routes/class.service";
 import testRoutes from "./routes/test.route";
 
 
@@ -15,7 +16,7 @@ const app: Application = express();
 
 // CORS configuration
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://127.0.0.1:3000'],
+  origin: ['*'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
@@ -34,8 +35,8 @@ app.get("/", (req: Request, res: Response) => {
 });
 
 app.use("/api/v1/auths", authRoutes);
+app.use("/api/v1/classes", classRoutes);
 app.use("/api/v1/tests", testRoutes);
-
 
 // Handle 404
 app.all(/.*/, (req, res, next) => {

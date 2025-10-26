@@ -1,36 +1,16 @@
 import { Request, Response, NextFunction } from 'express';
 import { TestService } from '../services/test.service';
-import catchAsync from '../utils/catchAsync'; // Assuming the utility path
+import { catchAsync } from '../utils/catchAsync'; // Assuming the utility path
 import { JWTPayload } from '../types/auth.types'; // Assuming this type includes id, role, organizationId
 
 const testService = new TestService();
 
-// Extend the Request object to include the 'user' payload from authentication middleware
-interface RequestWithUser extends Request {
-  user?: JWTPayload;
-}
-
-// Ensure only Org Admins or Staff can access test creation routes
-const restrictToStaff = (req: RequestWithUser, res: Response, next: NextFunction) => {
-    const role = req.user?.role;
-    if (role !== 'ORG_ADMIN' && role !== 'STAFF') {
-        return res.status(403).json({
-            status: 'fail',
-            message: 'You do not have permission to perform this action.',
-        });
-    }
-    next();
-};
-
-// ------------------------------------------------------------------
-// Controllers
-// ------------------------------------------------------------------
 
 /**
  * POST /api/v1/tests
  * Create a new Test.
  */
-export const createTest = catchAsync(async (req: RequestWithUser, res: Response) => {
+export const createTest = catchAsync(async (req: Request, res: Response) => {
   const { id: creatorId, organizationId } = req.user!; // Assumed to be populated by auth middleware
 
   if (!organizationId) {
@@ -52,7 +32,7 @@ export const createTest = catchAsync(async (req: RequestWithUser, res: Response)
  * POST /api/v1/tests/:testId/questions
  * Add a new Question and its Options to a Test.
  */
-export const addQuestionToTest = catchAsync(async (req: RequestWithUser, res: Response) => {
+export const addQuestionToTest = catchAsync(async (req: Request, res: Response) => {
   const { testId } = req.params;
 
   // Optionally, add a check here to ensure the test belongs to the user's organization.
@@ -70,7 +50,7 @@ export const addQuestionToTest = catchAsync(async (req: RequestWithUser, res: Re
  * GET /api/v1/tests/:testId
  * Get a specific Test with all its questions and options.
  */
-export const getTestDetails = catchAsync(async (req: RequestWithUser, res: Response) => {
+export const getTestDetails = catchAsync(async (req: Request, res: Response) => {
   const { testId } = req.params;
   const { organizationId } = req.user!;
 
@@ -93,7 +73,7 @@ export const getTestDetails = catchAsync(async (req: RequestWithUser, res: Respo
  * PATCH /api/v1/tests/:testId/publish
  * Publish a Test.
  */
-export const publishTest = catchAsync(async (req: RequestWithUser, res: Response) => {
+export const publishTest = catchAsync(async (req: Request, res: Response) => {
   const { testId } = req.params;
   const { organizationId } = req.user!;
 
@@ -111,8 +91,3 @@ export const publishTest = catchAsync(async (req: RequestWithUser, res: Response
     message: result.message,
   });
 });
-
-// ------------------------------------------------------------------
-// Example Router Setup (for context)
-// ------------------------------------------------------------------
-/*

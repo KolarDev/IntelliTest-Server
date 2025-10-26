@@ -1,9 +1,10 @@
 import express from 'express';
-// import { protect } from '../middlewares/auth.middleware'; // Assumed auth middleware
-
+import { authenticate } from '../middlewares/auth.middleware'; // Assumed auth middleware
+import { createTest, addQuestionToTest, getTestDetails, publishTest } from '../controllers/test.controller';
+import { restrictToStaff } from '../middlewares/role.middleware';
 const router = express.Router();
 
-router.use(protect); // All routes below are protected
+router.use(authenticate); // All routes below are protected
 
 // Apply role restriction middleware globally for test management
 router.use(restrictToStaff); 
@@ -21,4 +22,3 @@ router.route('/:testId/publish')
   .patch(publishTest);
   
 export default router;
-*/

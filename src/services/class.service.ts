@@ -15,7 +15,7 @@ export class ClassService {
   async createClass(organizationId: string, staffId: string, data: CreateClassRequest) {
     // 1. Validate staff member exists and belongs to the organization (Crucial step)
     const staff = await prisma.staff.findFirst({
-      where: { id: staffId, organizationId },
+      where: { userId: staffId, organizationId },
     });
 
     if (!staff) {
@@ -25,7 +25,7 @@ export class ClassService {
     const newClass = await prisma.class.create({
       data: {
         organizationId,
-        staffId,
+        staffId: staff.id,
         name: data.name,
         description: data.description,
       },

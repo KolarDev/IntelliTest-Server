@@ -12,6 +12,7 @@ const classService = new ClassService();
 export const createClass = catchAsync(async (req: Request, res: Response) => {
   // Use non-null assertion (!) since the restrictToStaff middleware guarantees 'req.user' exists.
   const { id: staffId, organizationId } = req.user!;
+  console.log(req.user);
 
   if (!organizationId) {
     return res.status(403).json({

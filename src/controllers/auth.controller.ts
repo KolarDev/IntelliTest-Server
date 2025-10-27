@@ -1,6 +1,5 @@
 import { Router, Request, Response } from 'express';
 import { AuthService } from '../services/auth.service';
-import { authenticate, authorize } from '../middlewares/auth.middleware';
 import { RegisterOrgRequest, LoginRequest, CreateStaffRequest, CreateStudentRequest } from '../types/auth.types';
 import { catchAsync } from '../utils/catchAsync';
 import { AppError } from '../utils/appError';

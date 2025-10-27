@@ -51,6 +51,13 @@ export class AuthService {
   }
 
   async registerOrganization(data: RegisterOrgRequest) {
+    const existingUser = await prisma.user.findUnique({
+      where: { email: data.email },
+    });
+
+    if (existingUser) {
+      throw new AppError('Email address already registered.', 409);
+    }
     const hashedPassword = await this.hashPassword(data.password);
 
     const user = await prisma.user.create({

@@ -17,13 +17,13 @@ export class TestService {
     });
 
     if (!staff || staff.organizationId !== organizationId) {
-      throw new AppError('Creator must be a staff member of the organization.', 403);
+      throw new AppError('Test creator must be a staff member of the organization.', 403);
     }
 
     const test = await prisma.test.create({
       data: {
         organization: { connect: { id: organizationId } },
-        creator: { connect: { id: staff.id } }, // Connect to Staff ID
+        creator: { connect: { id: staff.id } },
         title: data.title,
         description: data.description,
         durationMinutes: data.durationMinutes,

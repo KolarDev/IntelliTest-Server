@@ -1,17 +1,15 @@
 import { Request, Response, NextFunction } from 'express';
 import { TestService } from '../services/test.service';
-import { catchAsync } from '../utils/catchAsync'; // Assuming the utility path
-import { JWTPayload } from '../types/auth.types'; // Assuming this type includes id, role, organizationId
+import { catchAsync } from '../utils/catchAsync';
 
 const testService = new TestService();
-
 
 /**
  * POST /api/v1/tests
  * Create a new Test.
  */
 export const createTest = catchAsync(async (req: Request, res: Response) => {
-  const { id: creatorId, organizationId } = req.user!; // Assumed to be populated by auth middleware
+  const { id: creatorId, organizationId } = req.user!;
 
   if (!organizationId) {
     return res.status(403).json({

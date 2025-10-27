@@ -1,42 +1,17 @@
 import { Request, Response, NextFunction } from 'express';
 import { ClassService } from '../services/class.service';
-import { catchAsync } from '../utils/catchAsync'; // Assumed utility path
-import { JWTPayload } from '../types/auth.types'; // Assumed type
+import { catchAsync } from '../utils/catchAsync'; 
+import { JWTPayload } from '../types/auth.types'; 
 
 const classService = new ClassService();
-
-// Type assertion function to safely access the user payload injected by middleware
-const getUserPayload = (req: Request): JWTPayload => {
-    // This assertion relies on middleware (e.g., 'protect') having successfully 
-    // populated req.user before the controller runs.
-    return (req as Request & { user: JWTPayload }).user;
-};
-
-// Middleware to ensure only Org Admins or Staff can access class management routes
-const restrictToStaff = (req: Request, res: Response, next: NextFunction) => {
-    // Note: Using 'req.user' here requires a type assertion or global type declaration to satisfy TS.
-    const user = (req as Request & { user?: JWTPayload }).user;
-    const role = user?.role;
-    
-    if (role !== 'ORG_ADMIN' && role !== 'STAFF') {
-        return res.status(403).json({
-            status: 'fail',
-            message: 'You do not have permission to perform this action.',
-        });
-    }
-    next();
-};
-
-// ------------------------------------------------------------------
-// Controllers
-// ------------------------------------------------------------------
 
 /**
  * POST /api/v1/classes
  * Create a new Class. Requires Staff/ORG_ADMIN role.
  */
 export const createClass = catchAsync(async (req: Request, res: Response) => {
-  const { id: staffId, organizationId } = getUserPayload(req);
+  // Use non-null assertion (!) since the restrictToStaff middleware guarantees 'req.user' exists.
+  const { id: staffId, organizationId } = req.user!;
 
   if (!organizationId) {
     return res.status(403).json({
@@ -59,7 +34,7 @@ export const createClass = catchAsync(async (req: Request, res: Response) => {
  * Retrieve all Classes in the Organization.
  */
 export const getClasses = catchAsync(async (req: Request, res: Response) => {
-  const { organizationId } = getUserPayload(req);
+  const { organizationId } = req.user!;
 
   if (!organizationId) {
     return res.status(403).json({
@@ -83,7 +58,7 @@ export const getClasses = catchAsync(async (req: Request, res: Response) => {
  */
 export const enrollStudents = catchAsync(async (req: Request, res: Response) => {
   const { classId } = req.params;
-  const { organizationId } = getUserPayload(req);
+  const { organizationId } = req.user!;
 
   if (!organizationId) {
     return res.status(403).json({
@@ -122,7 +97,7 @@ export const removeStudentFromClass = catchAsync(async (req: Request, res: Respo
  * Assign a Test to a specific Class. Requires Staff/ORG_ADMIN role.
  */
 export const assignTest = catchAsync(async (req: Request, res: Response) => {
-  const { organizationId } = getUserPayload(req);
+  const { organizationId } = req.user!;
 
   if (!organizationId) {
     return res.status(403).json({

@@ -19,7 +19,7 @@ export class ClassService {
     });
 
     if (!staff) {
-      throw new AppError('Creator is not a valid staff member of this organization.', 403);
+      throw new AppError('You are not a valid staff member of this organization.', 403);
     }
 
     const newClass = await prisma.class.create({

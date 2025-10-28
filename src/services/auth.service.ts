@@ -4,6 +4,7 @@ import { prisma } from '../lib/prisma';
 import { config } from '../config/envSchema';
 import { Email } from './email.service';
 import { AppError } from '../utils/appError';
+import { emailQueue } from '../queues/email.queue';
 import { JWTPayload, AuthTokens, RegisterOrgRequest, CreateStaffRequest, CreateStudentRequest } from '../types/auth.types';
 
 export class AuthService {
@@ -158,6 +159,19 @@ export class AuthService {
 
     // TODO: Send email with temporary password
     console.log(`Staff created. Temporary password: ${tempPassword}`);
+    // Send email with temporary password using the queue
+    await emailQueue.add(
+        `staff-welcome-${user.id}`,
+        {
+            to: user.email,
+            template: 'welcomeStaff', // Assuming you create this template
+            subject: 'Welcome to IntelliTest',
+            contents: { 
+                user: { firstName: user.firstName }, 
+                extraData: { tempPassword } 
+            }
+        }
+    );
 
     return user;
   }
@@ -262,10 +276,19 @@ export class AuthService {
     // Use firstName as the user's name in the email
     const userName = user.firstName;
 
-    await new Email(user.email, {
-      user,
-      extraData: { otp, userName }
-    }).send(template, subject);
+    // NEW: Add the job to the queue, completely decoupling the API flow
+    await emailQueue.add(
+        `${template}-${user.id}`, // Unique job name
+        {
+            to: user.email,
+            template,
+            subject,
+            contents: { user, extraData: { otp, userName } }
+        },
+        // Optional: If you needed special options for this specific job
+        // {}
+    );
+
   }
 
   async sendOtp(email: string) {

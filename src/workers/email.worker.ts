@@ -1,4 +1,3 @@
-// worker/email.worker.ts
 import { Worker } from 'bullmq';
 import { redisConnection } from '../config/redis.config';
 import { Email } from '../services/email.service';
@@ -31,5 +30,3 @@ worker.on('failed', (job, err) => {
 });
 
 console.log(`Email Worker listening for jobs in queue: ${EMAIL_QUEUE_NAME}`);
-
-// Remember: This file needs to be run continuously in production!

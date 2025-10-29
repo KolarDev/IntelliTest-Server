@@ -4,7 +4,7 @@ import { prisma } from '../lib/prisma';
 import { config } from '../config/envSchema';
 import { Email } from './email.service';
 import { AppError } from '../utils/appError';
-import { emailQueue } from '../queues/email.queue';
+import { EmailJobData, emailQueue } from '../queues/email.queue';
 import { JWTPayload, AuthTokens, RegisterOrgRequest, CreateStaffRequest, CreateStudentRequest } from '../types/auth.types';
 
 export class AuthService {
@@ -276,18 +276,34 @@ export class AuthService {
     // Use firstName as the user's name in the email
     const userName = user.firstName;
 
-    // NEW: Add the job to the queue, completely decoupling the API flow
-    await emailQueue.add(
-        `${template}-${user.id}`, // Unique job name
-        {
-            to: user.email,
-            template,
-            subject,
-            contents: { user, extraData: { otp, userName } }
-        },
-        // Optional: If you needed special options for this specific job
-        // {}
-    );
+    // // NEW: Add the job to the queue, completely decoupling the API flow
+    // await emailQueue.add(
+    //     `${template}-${user.id}`, // Unique job name
+    //     {
+    //         to: user.email,
+    //         template,
+    //         subject,
+    //         contents: { user, extraData: { otp, userName } }
+    //     },
+    //     // Optional: If you needed special options for this specific job
+    //     // {}
+    // );
+
+    const jobData: EmailJobData = {
+        to: user.email,
+        subject: 'Your One-Time Password',
+        template: 'otp',
+        contents: { user, extraData: { otp, userName } }
+    };
+
+    console.log('Attempting to enqueue job with data:', jobData.to); // 👈 Check 1
+
+    try {
+        const job = await emailQueue.add('sendOtpEmail', jobData);
+        console.log(`✅ Successfully enqueued job ${job.id}`); // 👈 Check 2 (Expected log)
+    } catch (error) {
+        console.error('❌ FAILED to enqueue job:', error); // 👈 Check 3 (Look for this error)
+    }
 
   }
 

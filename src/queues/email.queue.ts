@@ -1,5 +1,16 @@
+import Redis from 'ioredis';
 import { Queue } from 'bullmq';
 import { redisConnection } from '../config/redis.config';
+
+const connection = new Redis(redisConnection);
+
+connection.on('connect', () => {
+    console.log('✅ Redis connection for PRODUCER successful.');
+});
+
+connection.on('error', (err) => {
+    console.error('❌ Redis connection error for PRODUCER:', err);
+});
 
 // Define the name of the queue
 export const EMAIL_QUEUE_NAME = 'emailQueue';
@@ -16,9 +27,12 @@ export interface EmailJobData {
   };           
 }
 
+
+
 // Create the single queue instance for publishing jobs
 export const emailQueue = new Queue<EmailJobData>(EMAIL_QUEUE_NAME, {
-  connection: redisConnection,
+  // connection: redisConnection,
+  connection: connection,
   // Default options for all jobs in this queue
   defaultJobOptions: {
     attempts: 3, // Retry a failed job 3 times
